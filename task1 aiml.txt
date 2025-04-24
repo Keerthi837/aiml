@@ -1,0 +1,56 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.impute import SimpleImputer
+
+# Load the dataset
+df = pd.read_csv('/content/archive.zip')
+
+# Explore basic info
+print("Shape of the dataset:", df.shape)
+print("\nData types and null values:")
+print(df.info())
+print("\nSummary statistics:")
+print(df.describe())
+
+# Handle missing values
+# Impute numerical columns with mean
+numerical_cols = df.select_dtypes(include=np.number).columns
+imputer_mean = SimpleImputer(strategy='mean')
+df[numerical_cols] = imputer_mean.fit_transform(df[numerical_cols])
+
+# Impute categorical columns with mode
+categorical_cols = df.select_dtypes(include='object').columns
+for col in categorical_cols:
+    df[col].fillna(df[col].mode()[0], inplace=True)
+    
+# Convert categorical features to numerical
+label_encoder = LabelEncoder()
+for col in categorical_cols:
+    df[col] = label_encoder.fit_transform(df[col])
+    
+# Normalize/standardize numerical features
+scaler = StandardScaler()
+df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+
+# Visualize outliers and remove them
+for col in numerical_cols:
+    plt.figure()
+    sns.boxplot(x=df[col])
+    plt.title(f'Boxplot of {col}')
+    plt.show()
+    
+    # Remove outliers using IQR method
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
+
+print("\nCleaned and preprocessed data:")
+print(df.head())
+print("\nShape of the cleaned dataset:", df.shape)
