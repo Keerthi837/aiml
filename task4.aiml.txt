@@ -1,0 +1,139 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.datasets import load_breast_cancer
+
+# 1. Choose a binary classification dataset
+# Using the Breast Cancer Wisconsin Dataset from scikit-learn
+cancer = load_breast_cancer()
+df = pd.DataFrame(cancer.data, columns=cancer.feature_names)
+df['target'] = cancer.target
+
+# Separate features (X) and target (y)
+X = df.drop('target', axis=1)
+y = df['target']
+
+# 2. Train/test split and standardize features
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Standardize features using StandardScaler
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 3. Fit a Logistic Regression model
+model = LogisticRegression(random_state=42)
+model.fit(X_train_scaled, y_train)
+
+# Make predictions on the test set
+y_pred = model.predict(X_test_scaled)
+y_prob = model.predict_proba(X_test_scaled)[:, 1] # Probability of the positive class
+
+# 4. Evaluate with confusion matrix, precision, recall, ROC-AUC
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# ROC Curve and AUC
+fpr, tpr, thresholds = roc_curve(y_test, y_prob)
+roc_auc = roc_auc_score(y_test, y_prob)
+
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlabel('False Positive Rate (FPR)')
+plt.ylabel('True Positive Rate (TPR)')
+plt.title('Receiver Operating Characteristic (ROC) Curve')
+plt.legend(loc='lower right')
+plt.show()
+
+# 5. Tune threshold and explain sigmoid function
+print("\n--- Tuning the Threshold and Sigmoid Function ---")
+
+# The sigmoid function is the core of logistic regression. It takes any real-valued number
+# and maps it to a value between 0 and 1. Mathematically, it's represented as:
+#
+# $$\sigma(z) = \frac{1}{1 + e^{-z}}$$
+#
+# where \(z\) is the linear combination of input features and their weights (plus the bias):
+#
+# $$z = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + ... + \beta_n x_n$$
+#
+# The output of the sigmoid function, \(\sigma(z)\), represents the probability of the instance
+# belonging to the positive class (usually class 1).
+
+# We can adjust the classification threshold (default is 0.5) to balance precision and recall
+custom_threshold = 0.3
+y_pred_thresholded = (y_prob > custom_threshold).astype(int)
+
+print(f"\nEvaluation with a custom threshold of {custom_threshold}:")
+print("Confusion Matrix (Thresholded):")
+print(confusion_matrix(y_test, y_pred_thresholded))
+print("\nClassification Report (Thresholded):")
+print(classification_report(y_test, y_pred_thresholded))
+
+# The choice of threshold depends on the specific problem and the relative importance of
+# minimizing false positives versus false negatives. For example:
+# - In medical diagnosis, we might want a lower threshold to avoid missing any positive cases (high recall).
+# - In spam detection, we might prefer a higher threshold to avoid incorrectly classifying important emails as spam (high precision).
+
+print("\n--- Interview Questions ---")
+print("\n1. How does logistic regression differ from linear regression?")
+print("""Logistic regression is used for binary or multi-class classification problems, while linear regression is used for predicting continuous values.
+Linear regression models the relationship between variables using a straight line. Logistic regression, on the other hand, models the probability of a binary outcome using the sigmoid function to map the linear combination of features to a range between 0 and 1.""")
+
+print("\n2. What is the sigmoid function?")
+print("""The sigmoid function (also known as the logistic function) is an S-shaped curve that maps any real-valued number to a probability between 0 and 1. Its formula is $\sigma(z) = \frac{1}{1 + e^{-z}}$. It's crucial in logistic regression for transforming the linear output of the model into a probability score.""")
+
+print("\n3. What is precision vs recall?")
+print("""Precision is the proportion of correctly predicted positive instances out of all instances predicted as positive. It answers the question: "Of all the instances the model labeled as positive, what proportion were actually positive?"
+   Precision = True Positives / (True Positives + False Positives)
+
+Recall (also known as sensitivity or true positive rate) is the proportion of correctly predicted positive instances out of all actual positive instances. It answers the question: "Of all the actual positive instances, what proportion did the model correctly identify?"
+   Recall = True Positives / (True Positives + False Negatives)
+
+There's often a trade-off between precision and recall. Increasing one might decrease the other depending on the threshold used for classification.""")
+
+print("\n4. What is the ROC-AUC curve?")
+print("""The Receiver Operating Characteristic (ROC) curve is a graphical plot that illustrates the diagnostic ability of a binary classifier as its discrimination threshold is varied. It plots the True Positive Rate (TPR or recall) against the False Positive Rate (FPR) at various threshold settings.
+
+The Area Under the ROC Curve (AUC) represents the probability that a randomly chosen positive instance will be ranked higher than a randomly chosen negative instance by the classifier. An AUC of 0.5 indicates no discrimination ability, while an AUC of 1 indicates perfect discrimination.""")
+
+print("\n5. What is the confusion matrix?")
+print("""A confusion matrix is a table that summarizes the performance of a classification model. For a binary classification problem, it typically has four entries:
+- True Positives (TP): Instances that were actually positive and were correctly predicted as positive.
+- True Negatives (TN): Instances that were actually negative and were correctly predicted as negative.
+- False Positives (FP): Instances that were actually negative but were incorrectly predicted as positive (Type I error).
+- False Negatives (FN): Instances that were actually positive but were incorrectly predicted as negative (Type II error).
+
+The confusion matrix provides the basis for calculating various evaluation metrics like precision, recall, accuracy, and F1-score.""")
+
+print("\n6. What happens if classes are imbalanced?")
+print("""If the classes in the dataset are imbalanced (i.e., one class has significantly more instances than the other), it can lead to several issues:
+- The model might be biased towards the majority class and perform poorly on the minority class.
+- Overall accuracy might be high even if the model fails to correctly classify the minority class.
+- Evaluation metrics like precision and recall become more important than just accuracy.
+
+Strategies to handle imbalanced datasets include:
+- Resampling techniques (oversampling the minority class, undersampling the majority class).
+- Using different evaluation metrics (e.g., F1-score, AUC).
+- Cost-sensitive learning (assigning different weights to misclassifications of different classes).
+- Using specialized algorithms designed for imbalanced datasets.""")
+
+print("\n7. How do you choose the threshold?")
+print("""The choice of threshold in logistic regression depends on the specific goals of the classification task and the relative costs of false positives and false negatives. Some common approaches include:
+- Using the default threshold of 0.5, which aims for a balance between precision and recall.
+- Analyzing the ROC curve and choosing a threshold that corresponds to a desired trade-off between TPR and FPR.
+- Optimizing for a specific metric like precision, recall, or F1-score based on the application's needs. For example, in a high-stakes medical diagnosis, we might prioritize recall to avoid missing positive cases, even if it means a lower precision.
+- Using techniques like Youden's J statistic to find an optimal threshold that maximizes the difference between TPR and FPR.""")
+
+print("\n8. Can logistic regression be used for multi-class problems?")
+print("""Yes, logistic regression can be extended to handle multi-class classification problems using techniques like:
+- One-vs-Rest (OvR) or One-vs-All: Training a separate binary logistic regression model for each class, where one class is treated as the positive class and all other classes are treated as the negative class. The class with the highest predicted probability among all classifiers is chosen.
+- One-vs-One (OvO): Training a binary logistic regression model for every pair of classes. The final prediction is made based on a voting scheme among all the pairwise classifiers.
+- Multinomial Logistic Regression (Softmax Regression): This is a generalization of logistic regression to multiple classes. It directly models the probability of each class using the softmax function, which extends the sigmoid function to multiple output categories.""")
