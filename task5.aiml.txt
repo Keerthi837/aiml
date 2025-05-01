@@ -1,0 +1,62 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import graphviz  # Make sure you have Graphviz installed
+
+# 1. Load and Prepare Data
+# Replace 'your_dataset.csv' with the actual path to your dataset
+data = pd.read_csv('your_dataset.csv')
+
+# Example: Assuming 'target' is the target variable and all other columns are features
+X = data.drop('target', axis=1)
+y = data['target']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 2. Train Decision Tree Classifier
+dt_model = DecisionTreeClassifier(max_depth=5, random_state=42)  # Limit depth to prevent overfitting
+dt_model.fit(X_train, y_train)
+
+# 3. Visualize the Decision Tree
+dot_data = export_graphviz(dt_model, out_file=None,
+                         feature_names=list(X_train.columns),
+                         class_names=list(dt_model.classes_),
+                         filled=True, rounded=True,
+                         special_characters=True)
+graph = graphviz.Source(dot_data)
+# graph.render('dt_tree.png') # Uncomment to save as an image
+graph # Display the tree in the output
+
+# 4. Analyze Overfitting and Control Tree Depth
+# Experiment with different max_depth values to see how it affects accuracy
+# and the size of the tree. A deeper tree can overfit, a shallower tree may underfit.
+
+# 5. Train Random Forest Classifier
+rf_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)  # Use more trees and depth
+rf_model.fit(X_train, y_train)
+
+# 6. Compare Accuracy
+dt_accuracy = accuracy_score(y_test, dt_model.predict(X_test))
+rf_accuracy = accuracy_score(y_test, rf_model.predict(X_test))
+
+print(f"Decision Tree Accuracy: {dt_accuracy}")
+print(f"Random Forest Accuracy: {rf_accuracy}")
+
+# 7. Interpret Feature Importances
+feature_importances = rf_model.feature_importances_
+print("Feature importances:")
+for feature, importance in zip(X.columns, feature_importances):
+    print(f"{feature}: {importance}")
+
+# 8. Evaluate using Cross-Validation
+dt_cv_scores = cross_val_score(DecisionTreeClassifier(max_depth=5, random_state=42), X, y, cv=5)
+rf_cv_scores = cross_val_score(RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42), X, y, cv=5)
+
+print("\nCross-validation scores (Decision Tree):", dt_cv_scores)
+print("Mean cross-validation score (Decision Tree):", dt_cv_scores.mean())
+
+print("\nCross-validation scores (Random Forest):", rf_cv_scores)
+print("Mean cross-validation score (Random Forest):", rf_cv_scores.mean())
